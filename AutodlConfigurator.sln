@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2010
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutodlConfigurator", "AutodlConfigurator\AutodlConfigurator.csproj", "{53CC81C8-B725-4F3A-9105-9D357576919F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{E83BAE37-C762-45FC-AC1F-94DD324E1BC7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AutodlConfiguratorTests", "AutodlConfiguratorTests\AutodlConfiguratorTests.csproj", "{8BB103C2-CC28-4AF8-9F88-97C942903D25}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{53CC81C8-B725-4F3A-9105-9D357576919F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53CC81C8-B725-4F3A-9105-9D357576919F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53CC81C8-B725-4F3A-9105-9D357576919F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53CC81C8-B725-4F3A-9105-9D357576919F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BB103C2-CC28-4AF8-9F88-97C942903D25}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BB103C2-CC28-4AF8-9F88-97C942903D25}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BB103C2-CC28-4AF8-9F88-97C942903D25}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BB103C2-CC28-4AF8-9F88-97C942903D25}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E8005F1F-E2A6-47D6-AC90-4375209BCD8A}
+	EndGlobalSection
+EndGlobal
