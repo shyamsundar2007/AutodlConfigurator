@@ -64,10 +64,21 @@ namespace AutodlConfigurator
                 {
                     using (StreamReader sr = new StreamReader(this.accessTokenPathWithName))
                     {
+                        // Temp store for access and refresh tokens
+                        string accessToken = null;
+                        string refreshToken = null;
+
+                        // Throw error if file does not have access token
+                        if (sr.EndOfStream)
+                            throw new IOException();
+
+                        // Read access and refresh tokens from file
+                        accessToken = sr.ReadLine();
+                        if (!sr.EndOfStream)
+                            refreshToken = sr.ReadLine();
                         traktClient = new TraktClient(this.clientID, this.clientSecret)
                         {
-                            Authorization = TraktAuthorization.CreateWith(sr.ReadLine())
-                            // TODO: Need ot check if token needs to be refreshed
+                            Authorization = TraktAuthorization.CreateWith(accessToken, refreshToken)
                         };
                     }
                 }
@@ -80,13 +91,49 @@ namespace AutodlConfigurator
             else
             {
                 traktClient = new TraktClient(this.clientID, this.clientSecret);
-                this.generateAccessTokenAsync().Wait();
+                this.GenerateAccessTokenAsync().Wait();
             }
+
+            // Refresh authorization if needed
+            this.RefreshAuthorizationAsync().Wait();
 
             // Force OAuth on all requests
             this.traktClient.Configuration.ForceAuthorization = true;
         }
 
+        /// <summary>
+        /// Refreshes access token if expired.
+        /// </summary>
+        /// <returns></returns>
+        private async Task RefreshAuthorizationAsync()
+        {
+            // Validate data
+            if (null == this.traktClient)
+                throw new NullReferenceException();
+
+            // Check if client needs a new auth token
+            bool tokenExpired = await this.traktClient.Authentication.CheckIfAccessTokenWasRevokedOrIsNotValidAsync(this.traktClient.Authorization.AccessToken);
+
+            // Get new access token if expired
+            if (tokenExpired)
+                await this.traktClient.DeviceAuth.RefreshAuthorizationAsync();
+        }
+
+        /// <summary>
+        /// Revokes authorization of trakt client.
+        /// </summary>
+        /// <returns></returns>
+        public async Task RevokeAuthorizationAsync()
+        {
+            // Validate data
+            if (null == this.traktClient)
+                throw new NullReferenceException();
+
+            // Revoke authorization
+            await this.traktClient.DeviceAuth.RevokeAuthorizationAsync();
+        }
+
+        /// <inheritdoc />
         /// <summary>
         /// Get list of movies from Trakt wishlist.
         /// </summary>
@@ -96,7 +143,7 @@ namespace AutodlConfigurator
             List<Movie> moviesList = new List<Movie>();
 
             // Get trakt movie watchlist
-            Task<TraktPaginationListResult<TraktWatchlistItem>> getTraktMoviesTask = Task.Run(() => this.getTraktWatchlistMoviesAsync());
+            Task<TraktPaginationListResult<TraktWatchlistItem>> getTraktMoviesTask = Task.Run(() => this.GetTraktWatchlistMoviesAsync());
             getTraktMoviesTask.Wait();
             TraktPaginationListResult<TraktWatchlistItem> traktMovieListResult = getTraktMoviesTask.Result;
 
@@ -114,7 +161,7 @@ namespace AutodlConfigurator
         /// Gets trakt movie watchlist through Trakt API.
         /// </summary>
         /// <returns>List of TraktWatchListItems</returns>
-        private async Task<TraktPaginationListResult<TraktWatchlistItem>> getTraktWatchlistMoviesAsync()
+        private async Task<TraktPaginationListResult<TraktWatchlistItem>> GetTraktWatchlistMoviesAsync()
         {
             try
             {
@@ -134,7 +181,7 @@ namespace AutodlConfigurator
         /// Generates access token for trakt client.
         /// </summary>
         /// <returns></returns>
-        private async Task generateAccessTokenAsync()
+        private async Task GenerateAccessTokenAsync()
         {
             // Get access token from Trakt
             TraktDevice device = await this.traktClient.DeviceAuth.GenerateDeviceAsync();
@@ -148,7 +195,7 @@ namespace AutodlConfigurator
                 using (StreamWriter sw = new StreamWriter(this.accessTokenPathWithName))
                 {
                     sw.WriteLine(authorization.AccessToken);
-                    // TODO: Save refresh token as well
+                    sw.WriteLine(authorization.RefreshToken);
                 }
             }
             catch (Exception e)
