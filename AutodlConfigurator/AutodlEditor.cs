@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 
@@ -83,12 +84,13 @@ namespace AutodlConfigurator
         public List<Movie> GetMoviesList()
         {
             // Initialize variables
-            string autodlFileNameWithPath = this.autodlFilePath + "\\" + this.autodlFileName;
+            string autodlFileNameWithPath = this.autodlFilePath + @"\" + this.autodlFileName;
             this.movieList = new List<Movie>(); // clear movieList since we are fetching again
 
             try
             {
                 // Open autodl file
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Trying to open file {autodlFileNameWithPath}");
                 using (StreamReader sr = new StreamReader(autodlFileNameWithPath))
                 {                  
                     // Read line by line
@@ -99,7 +101,6 @@ namespace AutodlConfigurator
                         Match movieMatchResult = Regex.Match(line, @"^\[filter (.*?)\]$", RegexOptions.IgnoreCase);
                         if (movieMatchResult.Success)
                         {
-                            Console.WriteLine("Match for {0}", movieMatchResult.Groups[1].Value);
                             Movie newMovie = new Movie(movieMatchResult.Groups[1].Value);
                             this.movieList.Add(newMovie);
                         }                        
@@ -108,10 +109,11 @@ namespace AutodlConfigurator
                         line = sr.ReadLine();
                     }
                 }
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Successfully read movies from autodl file.");
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                AutodlLogger.Log(AutodlLogLevel.ERROR, e.Message);
                 throw;
             }
 
@@ -127,7 +129,7 @@ namespace AutodlConfigurator
         {
             // Declare variables
             List<Movie> moviesToBeWrittenList = new List<Movie>();
-            string autodlFileNameWithPath = this.autodlFilePath + "\\" + this.autodlFileName;
+            string autodlFileNameWithPath = this.autodlFilePath + @"\" + this.autodlFileName;
 
             // Iterate each movie in movieList
             foreach (Movie movie in moviesToAddList)
@@ -137,9 +139,21 @@ namespace AutodlConfigurator
                     moviesToBeWrittenList.Add(movie);
             }
 
+            // Return early if no movies to add
+            if (!moviesToBeWrittenList.Any())
+            {
+                AutodlLogger.Log(AutodlLogLevel.INFO, @"No new movies to be written to autodl file.");
+                return;
+            }
+
+            // Log movies
+            AutodlLogger.Log(AutodlLogLevel.INFO, @"Here are the movies to be written to the autodl file: ");
+            moviesToBeWrittenList.ForEach(p => AutodlLogger.Log(AutodlLogLevel.INFO, p.Name));
+
             // Write movies to file
             try
-            {
+            {                
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Trying to write movies to {autodlFileNameWithPath}");
                 using (StreamWriter sw = new StreamWriter(autodlFileNameWithPath, true))
                 {
                     foreach (Movie movie in moviesToBeWrittenList)
@@ -149,10 +163,11 @@ namespace AutodlConfigurator
                         AddCommonParametersToAutodlConfig(sw);
                     }                    
                 }
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Successfully wrote movies autodl file.");
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                AutodlLogger.Log(AutodlLogLevel.ERROR, e.Message);
                 throw;
             }            
         }
