@@ -52,5 +52,25 @@ namespace AutodlConfiguratorTests
             // Validate test
             Assert.IsNotNull(traktMovieDBConnector.GetListOfMovies());
         }
+
+        [TestMethod]
+        public void TestRefreshAccessToken()
+        {
+            // If autodl file doesn't exist, skip test
+            if (!File.Exists(autodlFileWithName))
+                return;
+
+            // Create trakt client and revoke access immediately
+            TraktMovieDBConnector traktMovieDbConnector = new TraktMovieDBConnector(clientID, clientSecret);
+            string oldAccessToken = traktMovieDbConnector.traktClient.Authorization.AccessToken;
+            traktMovieDbConnector.RevokeAuthorizationAsync().Wait();
+
+            // Create new instance of trakt DB connector
+            traktMovieDbConnector = new TraktMovieDBConnector(clientID, clientSecret);
+            string newAccessToken = traktMovieDbConnector.traktClient.Authorization.AccessToken;
+
+            // Validate test
+            Assert.AreNotEqual(oldAccessToken, newAccessToken);
+        }
     }
 }
