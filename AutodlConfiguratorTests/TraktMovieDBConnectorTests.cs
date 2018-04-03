@@ -22,10 +22,10 @@ namespace AutodlConfiguratorTests
                 File.Delete(autodlFileWithName);
 
             // Create trakt client with initital authorization
-            TraktMovieDBConnector traktMovieDBConnector = new TraktMovieDBConnector(clientID, clientSecret);            
+            TraktMovieDbConnector traktMovieDBConnector = new TraktMovieDbConnector(clientID, clientSecret);            
             
             // Validate test
-            Assert.IsTrue(traktMovieDBConnector.traktClient.IsValidForUseWithAuthorization);
+            Assert.IsTrue(traktMovieDBConnector.TraktClient.IsValidForUseWithAuthorization);
             Assert.IsTrue(File.Exists(autodlFileWithName));
         }
 
@@ -37,17 +37,17 @@ namespace AutodlConfiguratorTests
                 return;
 
             // Create trakt client
-            TraktMovieDBConnector traktMovieDbConnector = new TraktMovieDBConnector(clientID, clientSecret);
+            TraktMovieDbConnector traktMovieDbConnector = new TraktMovieDbConnector(clientID, clientSecret);
 
             // Validate test
-            Assert.IsTrue(traktMovieDbConnector.traktClient.IsValidForUseWithAuthorization);
+            Assert.IsTrue(traktMovieDbConnector.TraktClient.IsValidForUseWithAuthorization);
         }
 
         [TestMethod]
         public void TestGetListOfMovies()
         {
             // Create trakt client
-            TraktMovieDBConnector traktMovieDBConnector = new TraktMovieDBConnector(clientID, clientSecret);
+            TraktMovieDbConnector traktMovieDBConnector = new TraktMovieDbConnector(clientID, clientSecret);
 
             // Validate test
             Assert.IsNotNull(traktMovieDBConnector.GetListOfMovies());
@@ -61,13 +61,13 @@ namespace AutodlConfiguratorTests
                 return;
 
             // Create trakt client and revoke access immediately
-            TraktMovieDBConnector traktMovieDbConnector = new TraktMovieDBConnector(clientID, clientSecret);
-            string oldAccessToken = traktMovieDbConnector.traktClient.Authorization.AccessToken;
+            TraktMovieDbConnector traktMovieDbConnector = new TraktMovieDbConnector(clientID, clientSecret);
+            string oldAccessToken = traktMovieDbConnector.TraktClient.Authorization.AccessToken;
             traktMovieDbConnector.RevokeAuthorizationAsync().Wait();
 
             // Create new instance of trakt DB connector
-            traktMovieDbConnector = new TraktMovieDBConnector(clientID, clientSecret);
-            string newAccessToken = traktMovieDbConnector.traktClient.Authorization.AccessToken;
+            traktMovieDbConnector = new TraktMovieDbConnector(clientID, clientSecret);
+            string newAccessToken = traktMovieDbConnector.TraktClient.Authorization.AccessToken;
 
             // Validate test
             Assert.AreNotEqual(oldAccessToken, newAccessToken);

@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
+using NLog;
 using TraktApiSharp;
 using TraktApiSharp.Authentication;
 using TraktApiSharp.Enums;
@@ -22,47 +23,48 @@ namespace AutodlConfigurator
     /// <summary>
     /// Class providing interface to Trakt API.
     /// </summary>
-    public class TraktMovieDBConnector : IMovieDbConnector
+    public class TraktMovieDbConnector : IMovieDbConnector
     {
         /// <summary>
         /// Trakt client.
         /// </summary>
-        public TraktClient traktClient;
+        public TraktClient TraktClient;
 
         /// <summary>
         /// Trakt client ID.
         /// </summary>
-        private string clientID;
+        private string _clientId;
 
         /// <summary>
         /// Trakt client secret.
         /// </summary>
-        private string clientSecret;
+        private string _clientSecret;
 
         /// <summary>
         /// Full path that the access token is saved in.
         /// </summary>
-        private string accessTokenPathWithName =
-            @"C:\Users\ShyamV\Documents\Visual Studio 2017\Projects\AutodlConfigurator\AutodlConfigurator\accesstoken.txt";
+        private string _accessTokenPathWithName =
+            @"C:\Users\ShyamV\Documents\Visual Studio 2017\Projects\AutodlConfigurator\AutodlConfigurator\accesstoken.txt";        
 
         /// <summary>
         /// Constructor for TraktMovieDBConnector.
         /// </summary>
-        /// <param name="clientID">Trakt API Client ID.</param>
+        /// <param name="clientId">Trakt API Client ID.</param>
         /// <param name="clientSecret">Trakt API Client Secret.</param>
-        public TraktMovieDBConnector(string clientID, string clientSecret)
+        public TraktMovieDbConnector(string clientId, string clientSecret)
         {
             // Assign internal data
-            this.clientID = clientID;
-            this.clientSecret = clientSecret;            
+            this._clientId = clientId;
+            this._clientSecret = clientSecret;            
 
             // Load access token from file if generated
             // Else generate access token from user
-            if (File.Exists(this.accessTokenPathWithName))
+            if (File.Exists(this._accessTokenPathWithName))
             {
+                AutodlLogger.Log(AutodlLogLevel.DEBUG,  $"Trying to read accesstoken file {this._accessTokenPathWithName}");
                 try
                 {
-                    using (StreamReader sr = new StreamReader(this.accessTokenPathWithName))
+                    using (StreamReader sr = new StreamReader(this._accessTokenPathWithName))
                     {
                         // Temp store for access and refresh tokens
                         string accessToken = null;
@@ -76,29 +78,32 @@ namespace AutodlConfigurator
                         accessToken = sr.ReadLine();
                         if (!sr.EndOfStream)
                             refreshToken = sr.ReadLine();
-                        traktClient = new TraktClient(this.clientID, this.clientSecret)
+                        TraktClient = new TraktClient(this._clientId, this._clientSecret)
                         {
                             Authorization = TraktAuthorization.CreateWith(accessToken, refreshToken)
                         };
+                        AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Successfully read access token and refresh token from file.");
                     }
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e);
+                    AutodlLogger.Log(AutodlLogLevel.ERROR, e.Message);
                     throw;
                 }
             }
             else
             {
-                traktClient = new TraktClient(this.clientID, this.clientSecret);
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Trying to generate new authorization token from user.");
+                TraktClient = new TraktClient(this._clientId, this._clientSecret);
                 this.GenerateAccessTokenAsync().Wait();
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Successfully generated new authorization token from user.");
             }
 
             // Refresh authorization if needed
             this.RefreshAuthorizationAsync().Wait();
 
             // Force OAuth on all requests
-            this.traktClient.Configuration.ForceAuthorization = true;
+            this.TraktClient.Configuration.ForceAuthorization = true;
         }
 
         /// <summary>
@@ -108,15 +113,22 @@ namespace AutodlConfigurator
         private async Task RefreshAuthorizationAsync()
         {
             // Validate data
-            if (null == this.traktClient)
+            if (null == this.TraktClient)
                 throw new NullReferenceException();
 
             // Check if client needs a new auth token
-            bool tokenExpired = await this.traktClient.Authentication.CheckIfAccessTokenWasRevokedOrIsNotValidAsync(this.traktClient.Authorization.AccessToken);
+            bool tokenExpired = await this.TraktClient.Authentication.CheckIfAccessTokenWasRevokedOrIsNotValidAsync(this.TraktClient.Authorization.AccessToken);
 
             // Get new access token if expired
             if (tokenExpired)
-                await this.traktClient.DeviceAuth.RefreshAuthorizationAsync();
+            {
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Token expired. Refreshing new token.");
+                await this.TraktClient.DeviceAuth.RefreshAuthorizationAsync();
+            }
+            else
+            {
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Token is valid. No need to refresh token.");
+            }
         }
 
         /// <summary>
@@ -126,11 +138,12 @@ namespace AutodlConfigurator
         public async Task RevokeAuthorizationAsync()
         {
             // Validate data
-            if (null == this.traktClient)
+            if (null == this.TraktClient)
                 throw new NullReferenceException();
 
             // Revoke authorization
-            await this.traktClient.DeviceAuth.RevokeAuthorizationAsync();
+            AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Revoking authorization token for user.");
+            await this.TraktClient.DeviceAuth.RevokeAuthorizationAsync();
         }
 
         /// <inheritdoc />
@@ -143,17 +156,19 @@ namespace AutodlConfigurator
             List<Movie> moviesList = new List<Movie>();
 
             // Get trakt movie watchlist
+            AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Trying to get watchlist of Trakt user.");
             Task<TraktPaginationListResult<TraktWatchlistItem>> getTraktMoviesTask = Task.Run(() => this.GetTraktWatchlistMoviesAsync());
             getTraktMoviesTask.Wait();
             TraktPaginationListResult<TraktWatchlistItem> traktMovieListResult = getTraktMoviesTask.Result;
+            AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Successfully received watchlist of Trakt user.");
 
             // Add trakt movies to movieList
             foreach (TraktWatchlistItem traktWatchlistItem in traktMovieListResult)
                 if ((DateTime.Now.Year - 2) <= traktWatchlistItem.Movie.Year) // TODO: Remove magic number
                     moviesList.Add(new Movie(traktWatchlistItem.Movie.Title)); // TODO: Let client choose year as parameter
+            AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Added trakt watchlist to movie list.");
 
-            Console.WriteLine(moviesList);
-
+            // Return movie list
             return moviesList;
         }
 
@@ -165,14 +180,15 @@ namespace AutodlConfigurator
         {
             try
             {
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Trying to get Trakt watchlist.");
                 var movieTraktList =
-                    await this.traktClient.Users.GetWatchlistAsync(@"shyamsundar2007", TraktSyncItemType.Movie); // TODO: Remove hardcoding
-                Console.WriteLine(movieTraktList);
+                    await this.TraktClient.Users.GetWatchlistAsync(@"shyamsundar2007", TraktSyncItemType.Movie); // TODO: Remove hardcoding
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Successfully retrieved Trakt watchlist.");
                 return movieTraktList;
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                AutodlLogger.Log(AutodlLogLevel.ERROR, e.Message);
                 throw;
             }
         }
@@ -184,23 +200,25 @@ namespace AutodlConfigurator
         private async Task GenerateAccessTokenAsync()
         {
             // Get access token from Trakt
-            TraktDevice device = await this.traktClient.DeviceAuth.GenerateDeviceAsync();
-            Console.WriteLine("Please go to {0} and enter code {1} on the page.", device.VerificationUrl, device.UserCode);
-            TraktAuthorization authorization = await this.traktClient.DeviceAuth.PollForAuthorizationAsync();
+            TraktDevice device = await this.TraktClient.DeviceAuth.GenerateDeviceAsync();
+            AutodlLogger.Log(AutodlLogLevel.INFO, $"Please go to {device.VerificationUrl} and enter code {device.UserCode} on the page.");
+            TraktAuthorization authorization = await this.TraktClient.DeviceAuth.PollForAuthorizationAsync();
 
             // Write access token to file
-            Console.WriteLine("Successfully received access token: {0}", authorization.AccessToken);
+            AutodlLogger.Log(AutodlLogLevel.INFO, $"Successfully received access token: {authorization.AccessToken}");
+            AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Trying to write access token and refresh token to file {this._accessTokenPathWithName}");
             try
             {
-                using (StreamWriter sw = new StreamWriter(this.accessTokenPathWithName))
+                using (StreamWriter sw = new StreamWriter(this._accessTokenPathWithName))
                 {
                     sw.WriteLine(authorization.AccessToken);
                     sw.WriteLine(authorization.RefreshToken);
                 }
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Successfully wrote access token and refresh token to file {this._accessTokenPathWithName}");
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                AutodlLogger.Log(AutodlLogLevel.ERROR, e.Message);
                 throw;
             }
         }
