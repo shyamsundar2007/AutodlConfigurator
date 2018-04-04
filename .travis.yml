@@ -1,2 +1,8 @@
 language: csharp
 solution: AutodlConfigurator.sln
+notifications:
+    email:
+      recipients:
+        - sundar.vinod@gmail.com
+      on_succes: never
+      on_failure: always
