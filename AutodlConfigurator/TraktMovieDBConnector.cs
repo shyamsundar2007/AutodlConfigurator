@@ -6,6 +6,7 @@ using TraktApiSharp;
 using TraktApiSharp.Authentication;
 using TraktApiSharp.Enums;
 using TraktApiSharp.Objects.Basic;
+using TraktApiSharp.Objects.Get.Collection;
 using TraktApiSharp.Objects.Get.Watchlist;
 
 namespace AutodlConfigurator
@@ -143,6 +144,8 @@ namespace AutodlConfigurator
         {
             // Declare local vairables
             List<Movie> moviesList = new List<Movie>();
+            List<Movie> moviesCollectedList;
+            List<Movie> prunedMoviesList = new List<Movie>();
 
             // Get trakt movie watchlist
             AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Trying to get watchlist of Trakt user.");
@@ -151,14 +154,26 @@ namespace AutodlConfigurator
             TraktPaginationListResult<TraktWatchlistItem> traktMovieListResult = getTraktMoviesTask.Result;
             AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Successfully received watchlist of Trakt user.");
 
+            // Get movies that have already been collected
+            Task<List<Movie>> getTraktCollectedMoviesListTask = Task.Run(() => this.GetTraktMoviesCollectedAsync());
+            getTraktCollectedMoviesListTask.Wait();
+            moviesCollectedList = getTraktCollectedMoviesListTask.Result;            
+
             // Add trakt movies to movieList
             foreach (TraktWatchlistItem traktWatchlistItem in traktMovieListResult)
                 if ((DateTime.Now.Year - 2) <= traktWatchlistItem.Movie.Year) // TODO: Remove magic number
                     moviesList.Add(new Movie(traktWatchlistItem.Movie.Title)); // TODO: Let client choose year as parameter
-            AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Added trakt watchlist to movie list.");
+            AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Added trakt watchlist to movie list.");            
+
+            // Prune away movies already collected
+            foreach (Movie movie in moviesList)
+            {
+                if (!moviesCollectedList.Contains(movie))
+                    prunedMoviesList.Add(movie);
+            }
 
             // Return movie list
-            return moviesList;
+            return prunedMoviesList;
         }
 
         /// <summary>
@@ -204,6 +219,37 @@ namespace AutodlConfigurator
                     sw.WriteLine(authorization.RefreshToken);
                 }
                 AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Successfully wrote access token and refresh token to file {this._accessTokenPathWithName}");
+            }
+            catch (Exception e)
+            {
+                AutodlLogger.Log(AutodlLogLevel.ERROR, e.Message);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets list of movies already collected by user.
+        /// </summary>
+        /// <returns></returns>
+        private async Task<List<Movie>> GetTraktMoviesCollectedAsync()
+        {
+            // Declare local vairables
+            List<Movie> moviesList = new List<Movie>();
+
+            try
+            {
+                // Retrieve collected movies from Trakt API
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Trying to retrieve movies already collected from Trakt.");
+                var collectedMovieTraktList = await this.TraktClient.Users.GetCollectionMoviesAsync(@"shyamsundar2007");    // TODO: Remove hardcoding
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, @"Successfully retrieved movies already collected from Trakt.");
+
+                // Convert Trakt movie to Autodl movie
+                foreach (var collectedMovie in collectedMovieTraktList)
+                {
+                    moviesList.Add(new Movie(collectedMovie.Movie.Title));
+                }
+
+                return moviesList;
             }
             catch (Exception e)
             {
