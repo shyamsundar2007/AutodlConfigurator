@@ -16,6 +16,14 @@ namespace AutodlConfigurator
             string autodlFileName = @"autodl.cfg";
             string uploadWatchDir = @"/Volumes/Plex_4TB/Downloads/Torrents/movies_watch/";
 
+            // Retrieve autodlfilePath from command line arguments if specified
+            if (0 == args.Length)
+                AutodlLogger.Log(AutodlLogLevel.WARNING, $"No autodl file path entered. Will use default path of {autodlFilePath}.");
+            else if (!File.Exists(Path.Combine(args[0], autodlFileName)))
+                AutodlLogger.Log(AutodlLogLevel.WARNING, $"Autodl file does not exist at path {Path.Combine(args[0], autodlFileName)}. Autodl file will be created at default path of {autodlFilePath}.");
+            else
+                autodlFilePath = args[0];
+
             // Create traktMovieDbConnector instance
             AutodlLogger.Log(AutodlLogLevel.INFO, @"Gettng the Trakt client started up...");
             IMovieDbConnector trakMovieDbConnector = new TraktMovieDbConnector(clientID, clientSecret);
