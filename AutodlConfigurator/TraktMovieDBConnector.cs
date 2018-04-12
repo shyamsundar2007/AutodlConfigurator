@@ -1,22 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
-using NLog;
 using TraktApiSharp;
 using TraktApiSharp.Authentication;
 using TraktApiSharp.Enums;
 using TraktApiSharp.Objects.Basic;
-using TraktApiSharp.Objects.Get.Users.Lists;
 using TraktApiSharp.Objects.Get.Watchlist;
-using TraktApiSharp.Requests.Params;
 
 namespace AutodlConfigurator
 {
@@ -43,8 +33,7 @@ namespace AutodlConfigurator
         /// <summary>
         /// Full path that the access token is saved in.
         /// </summary>
-        private string _accessTokenPathWithName =
-            @"C:\Users\ShyamV\Documents\Visual Studio 2017\Projects\AutodlConfigurator\AutodlConfigurator\accesstoken.txt";        
+        private string _accessTokenPathWithName = Path.Combine(Directory.GetCurrentDirectory(), "accesstoken.txt");
 
         /// <summary>
         /// Constructor for TraktMovieDBConnector.

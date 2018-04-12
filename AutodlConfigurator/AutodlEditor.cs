@@ -26,7 +26,7 @@ namespace AutodlConfigurator
         /// <summary>
         /// Entire autodl file name with path.
         /// </summary>
-        private string AutodlFileNameWithPath => this.autodlFilePath + @"\" + this.autodlFileName;
+        private string AutodlFileNameWithPath => Path.Combine(this.autodlFilePath, this.autodlFileName);
 
         /// <summary>
         /// List of movies
