@@ -24,6 +24,11 @@ namespace AutodlConfigurator
         private string autodlFileName;
 
         /// <summary>
+        /// Entire autodl file name with path.
+        /// </summary>
+        private string AutodlFileNameWithPath => this.autodlFilePath + @"\" + this.autodlFileName;
+
+        /// <summary>
         /// List of movies
         /// </summary>
         private List<Movie> movieList;
@@ -75,6 +80,13 @@ namespace AutodlConfigurator
             if (null != uploadWatchDir)
                 this.defaultUploadWatchDir = uploadWatchDir;
             this.movieList = new List<Movie>();
+
+            // Check if file exists on path, if not create one
+            if (!File.Exists(AutodlFileNameWithPath))
+            {
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, $"File does not exist. Creating file {AutodlFileNameWithPath}.");
+                using (FileStream fs = File.Create(AutodlFileNameWithPath)) {}
+            }
         }
 
         /// <summary>
@@ -84,14 +96,13 @@ namespace AutodlConfigurator
         public List<Movie> GetMoviesList()
         {
             // Initialize variables
-            string autodlFileNameWithPath = this.autodlFilePath + @"\" + this.autodlFileName;
             this.movieList = new List<Movie>(); // clear movieList since we are fetching again
 
             try
             {
                 // Open autodl file
-                AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Trying to open file {autodlFileNameWithPath}");
-                using (StreamReader sr = new StreamReader(autodlFileNameWithPath))
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Trying to open file {AutodlFileNameWithPath}");
+                using (StreamReader sr = new StreamReader(AutodlFileNameWithPath))
                 {                  
                     // Read line by line
                     string line = sr.ReadLine();
@@ -129,7 +140,6 @@ namespace AutodlConfigurator
         {
             // Declare variables
             List<Movie> moviesToBeWrittenList = new List<Movie>();
-            string autodlFileNameWithPath = this.autodlFilePath + @"\" + this.autodlFileName;
 
             // Iterate each movie in movieList
             foreach (Movie movie in moviesToAddList)
@@ -153,12 +163,12 @@ namespace AutodlConfigurator
             // Write movies to file
             try
             {                
-                AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Trying to write movies to {autodlFileNameWithPath}");
-                using (StreamWriter sw = new StreamWriter(autodlFileNameWithPath, true))
+                AutodlLogger.Log(AutodlLogLevel.DEBUG, $"Trying to write movies to {AutodlFileNameWithPath}");
+                using (StreamWriter sw = new StreamWriter(AutodlFileNameWithPath, true))
                 {
                     foreach (Movie movie in moviesToBeWrittenList)
                     {
-                        sw.WriteLine("\n[filter " + movie.Name + "]");
+                        sw.WriteLine(Environment.NewLine + "[filter " + movie.Name + "]");
                         sw.WriteLine("shows = " + movie.Name);
                         AddCommonParametersToAutodlConfig(sw);
                     }                    
